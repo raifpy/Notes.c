@@ -15,7 +15,6 @@ Table of Contents
   - [Logical Operators](#logical-operators)
   - [Triple-Argument Operator](#triple-argument-operator)
 - [String formating](#string-formating)
-  - [|`%hhu`|unsigned char|69|](#hhuunsigned-char69)
 - [Exercises](#exercises)
   - [The program that printing biggest number](#the-program-that-printing-biggest-number)
   - [The program that printing biggest char from ascii table](#the-program-that-printing-biggest-char-from-ascii-table)
@@ -145,6 +144,18 @@ Table of Contents
   - [Do the same thing with counter diagonal matrix](#do-the-same-thing-with-counter-diagonal-matrix)
   - [Do the same thing with using both](#do-the-same-thing-with-using-both)
   - [The program that takes 10 words from user and prints the longest one](#the-program-that-takes-10-words-from-user-and-prints-the-longest-one)
+- [Structures](#structures)
+  - [Size of Structers](#size-of-structers)
+  - [Accessing struct values from pointer](#accessing-struct-values-from-pointer)
+  - [Bit Fields](#bit-fields)
+  - [Structure Arrays](#structure-arrays)
+- [Unions](#unions)
+- [Exercises](#exercises-7)
+  - [1. Declare struct with different kind of types and compare sizes](#1-declare-struct-with-different-kind-of-types-and-compare-sizes)
+  - [2. Declare union with different kind of types and compare sizes](#2-declare-union-with-different-kind-of-types-and-compare-sizes)
+  - [3. Program to print and convert coordinate systems to each other.](#3-program-to-print-and-convert-coordinate-systems-to-each-other)
+  - [4. Sort personal data array by name and surname](#4-sort-personal-data-array-by-name-and-surname)
+  - [5. Find two most distant cartesian points from random filled point array](#5-find-two-most-distant-cartesian-points-from-random-filled-point-array)
 
 
 # Comments
@@ -448,7 +459,6 @@ As you can see we formatted values with `sprintf / printf` functions. Also you c
 |`%o`|octal|10|
 |`%c`|char|'a'|
 |`%hhu`|unsigned char|69|
----
 
 # Exercises
 ## The program that printing biggest number
@@ -4438,3 +4448,610 @@ void main(){
 }
 ```
 
+# Structures
+
+In C language, we are using `struct`s to represent variables with only one element. Use case are not narrow with only storing elements.
+They can initialize with types or empty.
+
+```c
+struct Student{
+    char *Name;
+    char *Surname;
+    unsigned int Id;
+};
+```
+
+In above example, we declared a `struct` which name is `Student`. However, this declaration is not variable. We created just a new type.
+
+```c
+struct Student John;
+```
+
+Now, `John` is a variable which freely changeable. 
+
+```c
+char name[] = "John";
+
+John.Name = name;
+John.Surname = "Turker";
+```
+
+We can change `Name` and `Surname` like the above example.
+
+```c
+struct Student john = {.Id = 10, .Name = "john"};
+```
+This usage is also legal. I think this usage is more convenient.
+
+Also we can declare Student struct and John in the same line
+
+```c
+struct Student{
+    char *Name;
+    char *Surname;
+    unsigned int Id;
+} John;
+```
+
+
+## Size of Structers
+
+We can use `sizeof` function to find the size of the `struct`.
+
+```c
+#include <stdio.h>
+
+struct Student{
+    
+    char *Name;
+    char *Surname;
+} Variable;
+
+int main()
+{
+    printf("Sizeof(Variable): %lu\n",sizeof(Variable)); // Sizeof(Variable): 16
+}
+```
+
+It gave us to 16 byte output. Note that in C language -with 64bit processor-, pointers occupies 8bytes in memory. We stored 2 pointers in struct, so size of struct is 16. With that example we saw that there is no size for empty struct.
+Let's try to add another types into our `struct Student`.
+
+```c
+#include <stdio.h>
+
+struct Student{
+    
+    char *Name;
+    char *Surname;
+    unsigned Id;
+
+
+} Variable;
+
+int main()
+{
+    printf("Sizeof(Variable): %lu\n",sizeof(Variable)); // Sizeof(Variable): 24
+}
+```
+
+We know that size of unsigned int (unsigned shortly) is 4 bytes. But sizeof function saying size of Student is 24 bytes. Maybe we really don't know what is the size of unsigned. Let's check
+
+```c
+printf("Sizeof(Variable.Id): %lu\n",sizeof(Variable.Id)); // Sizeof(Variable): 4
+```
+
+We proofed that unsigned type is 4 bytes. What happened to us is that we saw 24 bytes instead of 20 bytes?
+
+Answer is 'padding'. Briefly, C compiler adding padding bytes to synchronize lowest bytes to biggest type's size.
+
+```c
+struct Student{
+    
+    char *Name; // 8
+    char *Surname; // 8
+    unsigned Id; // 4
+    char _padding[4]; // simulation to what compiler doing automatically: 4
+} // Sizeof(Student): 24
+```
+
+Also we can add another type of variable instead of padding. 
+
+```c
+struct Student{
+    
+    char *Name; // 8
+    char *Surname; // 8
+    unsigned Id; // 4
+    unsigned Other; // 4
+} John; // Sizeof(John): 24
+```
+As you can see, they are same size!
+
+Not related note with C: `We are using struct-reindexing in Golang to solve this auto 'padding' act.`
+Also it can be `packable` with `#pragma pack(push,1)` header tag. And you can disable this feature with `#pragma pack(pop)`. They are compile-time properties which provided by compiler.
+
+This topic is very important and definitely it is deserving more time. However, not our topic *yet*.
+
+## Accessing struct values from pointer
+
+We have to use pointers when we want to change struct variables with function. Otherwise function just copies struct's it self and changes only as a local variable.
+
+```c
+void readValues(struct Student s){
+    printf("name: %s\n", s.Name);
+}
+```
+
+Again. We don't have any problem with reading. However when we want to change struct variable;
+
+```c
+void changeValues(struct Student s){
+    s.Name = "changed";
+}
+```
+Usage is legal. But variable of `s` is local variable. So change not effects the original variable. 
+
+```c
+
+void changeValues(struct Student s){
+    s->Name = "changed";
+    (*s).Surname = "surname";
+}
+
+void main(){
+    changeValues(&John);
+}
+```
+
+We used `&` symbol in here. This symbol mean extract the pointer of the value. With that way we can change our variable from different function freely.
+
+
+## Bit Fields
+
+We can change our variable's size as what we want in structers. 
+
+```c
+struct Student{
+    
+    char *Name; // 8
+    char *Surname; // 8
+    unsigned Id; // 4
+    unsigned Other; // 4
+    unsigned Language:1; // 1?
+} John;
+```
+`Language` is an `unsigned int` but it can only store `1` `bit`. It could be 0 or 1. Otherwise it will overflow!
+
+```c
+John.Language = 2; // 0
+John.Language = 3; // 1
+```
+
+Also we can use `signed` type for `Language` if we want a little fun. It will work as `Two's Complement`.
+
+```c
+John.Language = 0; // 0
+John.Language = 1; // -1
+John.Language = 99998; // 0
+```
+
+However, we can't use sizeof function on variables who has a bit field.
+
+## Structure Arrays
+
+We can use `structures` as an array.
+
+
+```c
+struct Student StudentList[100];
+
+StudentList[0].Name = "John";
+StudentList[0].Surname = "Turker";
+StudentList[0].Id = 1010;
+```
+
+Also `structers` can store another `structers` or another types.
+```c
+
+struct Person{
+    char *Name;
+    char *Surname;
+};
+
+typedef struct Person Student;
+
+struct Class{
+    Student Students[100];
+};
+```
+
+# Unions
+
+We can store one only variable with different types with `unions`. This property is very interesting.
+
+```c
+#include <stdio.h>
+
+union Data{
+    int asInteger;
+    char character;
+    unsigned asUInt;
+    unsigned asBitField:4;
+};
+
+
+void main(){
+    union Data data;
+    data.asInteger = 70;
+    printf("character: %c\n",data.character);
+    printf("asUInt: %u\n",data.asUInt);
+    printf("asBitField: %u\n",data.asBitField);
+}
+
+```
+
+All this other types are storing in same memory. If you want to change data from asUInt, you are free to change. But your change will effect all other types.
+
+```c
+#include <stdio.h>
+
+
+union Data{
+    int asInteger;
+    char character;
+    unsigned asUInt;
+    unsigned asBitField:4;
+};
+
+
+void main(){
+    union Data data;
+    data.asInteger = 70;
+    printf("character: %c\n",data.character);
+    printf("asUInt: %u\n",data.asUInt);
+    printf("asBitField: %u\n\n",data.asBitField);
+    
+    data.asBitField = 10000; // overflow
+    
+    printf("character: %c\n",data.character);
+    printf("asUInt: %u\n",data.asUInt);
+    printf("asBitField: %u\n\n",data.asBitField);
+    
+    data.asInteger = 0;
+    
+    printf("character: %c\n",data.character);
+    printf("asUInt: %u\n",data.asUInt);
+    printf("asBitField: %u\n\n",data.asBitField);
+    
+    data.asBitField = 10000; // overflow
+    
+    printf("character: %c\n",data.character);
+    printf("asUInt: %u\n",data.asUInt);
+    printf("asBitField: %u\n\n",data.asBitField);
+}
+```
+```
+character: F
+asUInt: 70
+asBitField: 6
+
+character: @
+asUInt: 64
+asBitField: 0
+
+character: 
+asUInt: 0
+asBitField: 0
+
+character: 
+asUInt: 0
+asBitField: 0
+```
+
+I think we had already knew the first answer. However, what about the second one? Number is same with `Third` declaration. But answer is different.
+Because on `Second` assignment, we are assigning 0 into the bit field type which is limited with only 4 bits. That mean, our program will change only the first 4 bits while assigning. Remains will stay same. On `Second` assignment, we assign 0 into the unsigned type which is not limited and size is 8. Assign type has a same size with biggest size. So all of variables were changed. Then, on `Fourth` assignment, we assign 0 into the bit field type which is limited with only 4 bits. But our remains are already 0. So, technically nothing changed.
+
+Also, sizeof will give the size of the biggest type inside of the union.
+
+
+# Exercises
+
+## 1. Declare struct with different kind of types and compare sizes
+
+```c
+#include "stdio.h"
+
+#pragma pack(push,1)
+
+struct { 
+    char lang;
+    int id;
+} pack;
+
+#pragma pack(pop)
+
+
+struct{
+    char lang;
+    int id;
+} pad;
+
+
+void main(){
+    printf("sizeof normal struct: %lu\n",sizeof(pad)); //8
+    printf("sum of normal struct: %lu\n",sizeof(pad.lang)+sizeof(pad.id)); //5
+
+    printf("sizeof pack struct: %lu\n",sizeof(pack)); //5
+    printf("sum of pack struct: %lu\n",sizeof(pack.lang)+sizeof(pack.id)); //5
+}
+```
+
+Well, I had try to explain why it is happening. Also `#pragma` attribute works on compile-time. There is no way to change this field after compiling.
+
+## 2. Declare union with different kind of types and compare sizes
+
+```c
+#include "stdio.h"
+
+union Avengers{
+    char *pointer; // 8
+    long long int grandpa; // 8
+    long int pa;
+    int ma;
+    short int ki;
+    char ba;
+};
+
+long unsigned getSum(union Avengers a){
+    return sizeof(a.pointer) + sizeof(a.grandpa) + sizeof(a.pa) + sizeof(a.ma) + sizeof(a.ki) + sizeof(a.ba);
+}
+
+long unsigned getSize(union Avengers *a){
+    return sizeof(*a); // same thing with plain a
+}
+
+void main(){
+    union Avengers a;
+    printf("sizeof Avengers a: %lu\n",getSize(&a)); // 8
+    printf("sum of Avengers a: %lu\n",getSum(a)); //  31
+}
+```
+
+Briefly, union type takes given biggest types size. Biggest types are `pointer` and `long long int`. Both are the 8 bytes. So, `sizeof` `union` is `8 bytes`. 
+
+## 3. Program to print and convert coordinate systems to each other.
+
+```c
+#include "stdio.h"
+#include "math.h"
+#include "time.h"
+#include "stdlib.h"
+
+enum CordinateSystem{Cartesian,Polar};
+
+union first_field{
+    int x;
+    double angle;
+};
+
+union second_field{
+    int y;
+    double magnitude;
+};
+
+typedef struct {
+    union first_field first; // x or angle
+    union second_field second; // y or magnitude
+    enum CordinateSystem type;
+} cordinate;
+
+cordinate convertCartesianToPolar(const cordinate cor){
+    cordinate new;
+    new.type = Polar;
+    
+    new.first.angle =  atan(cor.second.y/(double)cor.first.x);
+    new.second.magnitude = sqrt(      (cor.first.x*cor.first.x) +  (cor.second.y*cor.second.y)          );
+
+    return new;
+}
+
+cordinate convertPolarToCartesian(const cordinate cor){
+    cordinate new;
+    new.type = Cartesian;
+    new.first.x = round(cos(cor.first.angle)*cor.second.magnitude);
+    new.second.y = round( sin(cor.first.angle) * cor.second.magnitude);
+
+    return new;
+}
+// It could be universal converter which is checks by enum type
+
+void printCartesian(const cordinate cor){
+    switch (cor.type){
+        case Cartesian:
+            printf("\033[32mX\033[0m: %d\n\033[33mY\033[0m: %d\n",cor.first.x,cor.second.y);
+            break;
+        case Polar:
+            printf("\033[32mDegre\033[0m: %lf\n\033[33mMagnitude\033[0m: %lf\n",cor.first.angle,cor.second.magnitude);
+            break;
+        default: printf("unknown cartesian type: %d\n",cor.type);
+    }
+}
+
+void main(){
+    srand(time(NULL));
+
+    cordinate cordinateSystem;
+    cordinateSystem.type = Cartesian;
+    cordinateSystem.first.x = (rand() % 200)-100;
+    cordinateSystem.second.y = (rand() % 200)-100;
+
+
+    printCartesian(cordinateSystem);
+    cordinateSystem = convertCartesianToPolar(cordinateSystem);
+    printCartesian(cordinateSystem);
+    cordinateSystem = convertPolarToCartesian(cordinateSystem);
+    printCartesian(cordinateSystem);  
+}
+```
+
+Program is feeding the initial cordinate system which is cartesian with random numbers and converting to other cordinate system which is polar. And finally it is converting back to the original cordinate system. It might be eat signs of negative numbers :)
+
+## 4. Sort personal data array by name and surname
+
+```c
+#include "stdio.h"
+#include "time.h"
+#include "stdlib.h"
+
+
+enum Sortby{Name,Surname,Age};
+
+struct userData {
+    char *name;
+    char *surname;
+    unsigned short age;
+};
+
+struct userData database[12];
+char names[12][10] = {
+    "John",
+    "Micheal",
+    "Ince",
+    "Ricard",
+    "Ronaldo",
+    "Bedro",
+    "Khontkar",
+    "Messi",
+    "Muharrem",
+    "Raif",
+    "Algendo",
+    "Snopdog",
+}; // It won't good if some names starts with lower case :)
+
+void initDatabase(){
+    srand(time(0));
+    for (int i = 0; i<12; i++) {
+        database[i].name = names[i];
+        database[i].surname = names[rand()%12];
+        database[i].age = rand()%100;
+    }
+}
+
+void printDatabase(){
+    for (int i = 0; i<12; i++) {
+        printf("name: %s\nsurname: %s\nage: %d\n\n", database[i].name,database[i].surname,database[i].age);
+    }
+}
+
+void swap_userData(struct userData *first, struct userData *second){
+    struct userData tmp = *first;
+    *first = *second;
+    *second = tmp;
+}
+
+void sortDatabase(struct userData *database,enum Sortby sortvia){
+
+    for (int i = 0; i<12-1; i++) {
+        int min = i;
+        for (int j = i+1; j<12;j++){
+
+            if (
+                
+                (sortvia == Name && database[j].name[0] < database[min].name[0])  || 
+                (sortvia == Surname && database[j].surname[0] < database[min].surname[0]) ||
+                (sortvia == Age && database[j].age < database[min].age) 
+                
+               )   min = j;
+        }
+
+        if (min != i){
+            swap_userData(&database[min], &database[i]);
+        }
+    }
+}
+
+void main(){
+    initDatabase();
+    printDatabase();
+    
+    sortDatabase(database,Name);
+    printf("\033[33mSorted\033[0m by \033[32mname\033[0m\n\n");
+    printDatabase();
+
+    sortDatabase(database,Surname);
+    printf("\033[33mSorted\033[0m by \033[32msurname\033[0m\n\n");
+    printDatabase();
+
+    sortDatabase(database,Age);
+    printf("\033[33mSorted\033[0m by \033[32mage\033[0m\n\n");
+    printDatabase();
+}
+```
+
+Also I added `Age` field into database. It is using selection sort algorithm which is very easy to write :)
+
+## 5. Find two most distant cartesian points from random filled point array
+
+```c
+#include "stdio.h"
+#include "stdlib.h"
+#include "time.h"
+#include <math.h>
+
+struct Cordinates{
+    int X,Y;
+};
+
+void fillCordinatesByRange(struct Cordinates *cords,int size){
+    srand(time(NULL));
+    for (int i = 0; i < size; i++){
+        cords[i].X = (rand() % 21)-10;
+        cords[i].Y = (rand() % 21)-10;
+    }
+}
+
+void printCordinates(struct Cordinates *cords,int size){
+    for (int i = 0; i < size; i++){
+        printf("X: %d\nY: %d\n\n",cords[i].X,cords[i].Y);
+    }
+}
+
+double calculateDistance(struct Cordinates first, struct Cordinates second){
+    return sqrt( (abs(first.X) + abs(second.X)) * (abs(first.X) + abs(second.X)) ) + (  (abs(first.Y) + abs(second.Y)) * (abs(first.Y) + abs(second.Y))  ); 
+}
+
+struct Result{
+    int first,second;
+    double result;
+};
+
+struct Result getMostDistant(struct Cordinates *cords,int size){
+
+    struct Result result = {0,1,calculateDistance(cords[0],cords[1])};
+
+    for(int i = 0; i < size; i++){
+
+        for (int j = 0; j < size; j++){
+            if (i == j || result.first == j && result.second == i) continue; // Duplicate stuffs
+
+            
+            if (calculateDistance(cords[i],cords[j])  > result.result)  {
+                result.result = calculateDistance(cords[i],cords[j]);
+                result.first = i;
+                result.second = j;
+            }  
+        }
+    }
+    return result;
+}
+
+void main(){
+    struct Cordinates array[10];
+    fillCordinatesByRange(array,10);
+    printCordinates(array,10);
+    struct Result result = getMostDistant(array,10);
+
+    printf("most distance %lf\ncordinates: (%d,%d) and (%d,%d)\n",result.result,array[result.first].X,array[result.first].Y,array[result.second].X,array[result.second].Y);
+
+}
+```
