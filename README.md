@@ -156,6 +156,23 @@ Table of Contents
   - [3. Program to print and convert coordinate systems to each other.](#3-program-to-print-and-convert-coordinate-systems-to-each-other)
   - [4. Sort personal data array by name and surname](#4-sort-personal-data-array-by-name-and-surname)
   - [5. Find two most distant cartesian points from random filled point array](#5-find-two-most-distant-cartesian-points-from-random-filled-point-array)
+- [File Operations](#file-operations)
+  - [Modes](#modes)
+  - [Open and Close a file](#open-and-close-a-file)
+  - [Read from file](#read-from-file)
+  - [EOF](#eof)
+  - [Write to file](#write-to-file)
+  - [File seeking](#file-seeking)
+    - [ftell](#ftell)
+    - [feof](#feof)
+    - [ferror](#ferror)
+- [Exercises](#exercises-8)
+  - [1. Function that reads and prints a file](#1-function-that-reads-and-prints-a-file)
+  - [2. Program that reads own source code and prints only command lines.](#2-program-that-reads-own-source-code-and-prints-only-command-lines)
+  - [3. Program that saves 4x4 matrix into a file and restores again.](#3-program-that-saves-4x4-matrix-into-a-file-and-restores-again)
+  - [4. Program that doing diff](#4-program-that-doing-diff)
+  - [5. Program that stores and restores userdata from file](#5-program-that-stores-and-restores-userdata-from-file)
+  - [6. Program that creates random filled array, saves to file and restores.](#6-program-that-creates-random-filled-array-saves-to-file-and-restores)
 
 
 # Comments
@@ -5055,3 +5072,530 @@ void main(){
 
 }
 ```
+
+# File Operations
+
+Files are not just something which is occupies some size in disk. In Unix, all of communications are actually files. However, I will try to explain only what we really understand when someone say "file". 
+If you similar with any another programming language which is high-level than C, you might be saw file modes like `"r"` or `"w"`. Practice, we will use same file modes in C, with high-level file operators.
+
+**Note that:** Operating system manages files. So when we request to access a file, operating system answers.
+
+
+## Modes
+
+We have modes to access files. 
+
+|Mode|Description|Create|
+|-|-|-|
+|r|only read|false|
+|r+|read, also writable|false|
+|w|only write|true|
+|w+|write, also readable|true|
+|a|write but from EOF|true|
+|a+|write but from EOF, also readable|true|
+
+Important note: It will delete all old data when you use w or w+ mode. You might be surprised after w usage. Also r modes not creates a file if not exists.
+
+Also we can use `"b"` mode to access file as binary. For example `"rb"` to read file as a binary.
+
+## Open and Close a file
+
+Finally, we can open a file. If we don't have `r` mode, not important to if there is a file already. We can create a file if we use `w` or `a` modes.
+
+We can open a file with `fopen` function which is coming from `stdio.h` library.
+Also we are using `fclose` function to close a file. 
+```c
+FILE *cachefile = fopen("cache","w");
+```
+
+I used `w` mode `(create a file with only write mode)` to create a file which is called `cache` in same directory with my C binary.
+
+## Read from file
+
+We can use `fgetc`, `fgets`,`fread` or `fscanf` functions to read something from file. We had used `fgets` before. Also we used `scanf` function which is totaly same with `fscanf`.
+
+## EOF
+
+Which mean of `End Of File`
+
+It is important keyword because we have to answer the question `"Did we come to the end of the file?"` with somehow. And we are using EOF for that reason.
+Any read operation can return EOF. When we receive EOF from function, we should stop reading because there is not readable data exists anymore.
+
+## Write to file
+
+We can use `fprintf` or `fwrite` functions to write easily. `fprintf` is same with `printf` function as a design. Like `scanf`-`fscanf` function.
+
+## File seeking
+
+When we read or write a file, the "last time I was here" changes. It is very important because otherwise we read same data constantly. For example
+
+```c
+FILE *md = fopen("cache","r");
+char mybuffer[11];
+fscanf(md,"%10[^\n]",mybuffer);
+printf("v: %s seek: %ld\n",mybuffer,ftell(md));
+```
+
+Firstly, we opened `cache` file with `r` `(read only)` mode. Then we used `fscanf` function to read text with size of 10. Finally we can check our current seek with `ftell` function. If we have text in the file which is bigger than 10 characters, it will return 10. Otherwise it will return length of text as seek.
+
+However, we changed seek already with reading. But let's say we want to read same data again. We can use `fseek` function to change seek.
+
+```c
+fseek(md,0,SEEK_SET);
+```
+
+`SEEK_SET` mean start from beginning. Also we could use `fseek(md,-10,SEEK_CUR)` instead. We have `SEEK_SET`, `SEEK_CUR` and `SEEK_END` tags. Obviously `CUR` for `CURRENT`, `SET` for `START`, and `END` for `END`.
+
+### ftell
+
+We are using `ftell` function to get current seek. 
+
+### feof
+
+We can use `feof` function to check current seek is `EOF` or not.
+
+### ferror
+
+We can use `ferror` function to check if there is an error while processing files.
+
+# Exercises
+
+## 1. Function that reads and prints a file
+
+```c
+void readAndLog(char *path){
+    FILE *file = fopen(path,"r");
+    if (file == NULL){
+        return;
+    }
+    int c;
+    while(1){   
+        c = fgetc(file);
+        if (c == -1){
+            break;
+        }
+        printf("%c",c);
+    }
+
+    fclose(file);
+}
+```
+
+I used `fgetc` function to read file char by char. However it will return -1 (EOF) when comes end of the file. So, when `fgetc` returns -1 condition can be our break condition. And, finally I closed the open file. In Unix, it could be OK to exit this function without close the file for only short-live application. `(Note that, it is still bug, and Unix has a limitation to protect other process like open file limit (ulimit))`. We can still access the file from command line or file manager application. However, in Windows, we might can't. Windows can block our access.
+
+
+## 2. Program that reads own source code and prints only command lines.
+
+```c
+#include "stdio.h"
+
+// This is a command!
+
+/*This is another command*/
+
+/*This one is multi-line command
+Will it work?*/
+
+void readAndPrintIfItIsCommand(char *path){
+    // This function reads a file and prints all commands which is starts with //
+    FILE *file = fopen(path,"r");
+    int c;
+    char cm = 0;
+    char o = 0;
+    while(!feof(file)){
+        
+        c = fgetc(file);
+        switch (c)
+        {
+        case (EOF):return;
+        case ('/'):
+            if(!cm){
+                switch (fgetc(file)){
+                    case ('*'): o = 1; cm = 1; c = '{'; break;
+                    
+                    case ('/'):
+                    cm = 1;
+                    c = '#';
+                    break;
+
+                }
+            }
+            break;
+        case ('*'):
+            if (!cm){
+                break;
+            }
+            if (fgetc(file)){
+                o = 0;
+                cm = 0;
+                printf("}\n");
+            }
+            break;
+        }
+      
+        
+          if (cm) printf("%c",c);
+          if (cm && !o && c == 10) cm = 0;
+
+    }
+    
+}
+
+void main(){
+    readAndPrintIfItIsCommand("exercise_2.c");
+}
+
+// EOF
+```
+
+I used `//` and `/* */` separators. Also we learned that we have another command line option (I am sure that there is still another methods to do that). However, we are not developing macros yet. This program has to be enough.
+
+## 3. Program that saves 4x4 matrix into a file and restores again.
+
+
+```c
+#include "stdio.h"
+#include "time.h"
+#include "stdlib.h"
+#include "string.h"
+
+#define ROWS 4
+#define COLS 4
+
+
+char generateRandomNumber(){
+    return (rand() % 21)-10;
+}
+
+void fillMatrix(char matrix[][COLS]){
+    for (char i = 0; i < ROWS; i++){
+        for (char j = 0; j < COLS; j++) {
+            matrix[i][j] = generateRandomNumber();
+        }
+    }
+}
+long writeMatrixIntoFile(char matrix[][COLS],FILE *file){
+    long start = ftell(file);
+    for (char i = 0; i < ROWS; i++) {
+        for (char j = 0; j < COLS; j++) {
+            
+            fprintf(file,"%d",matrix[i][j]);
+            if (j != COLS-1){
+                fwrite(",",1,1,file);
+            }
+
+        }
+        fputc('\n', file);
+    }
+
+    return ftell(file)-start;
+}
+
+void restoreMatrixFromFile(char matrix[][COLS],FILE *file){
+    char buffer[4*COLS+COLS]; // len("-255") == 4 -> max buffer for single char decimal
+    for (char i = 0; i < ROWS; i++) {
+        fgets(buffer, sizeof(buffer), file);
+        //fscanf(file,"%[^\n]",buffer); //! fscanf function is not effecting the seek!
+        char *decimal = strtok(buffer,",");
+        for( char j = 0; j < COLS && decimal;j++){
+            matrix[i][j] = atoi(decimal);
+            decimal = strtok(NULL,",");
+        }
+    }
+}
+
+void printMatrix(char matrix[][COLS]){
+     for (char i = 0; i < ROWS; i++) {
+        for (char j = 0; j < COLS; j++) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void init(){
+    srand(time(NULL));
+}
+
+void main(){
+    init();
+    
+    char matrix[ROWS][COLS];
+    fillMatrix(matrix);
+    printMatrix(matrix);
+    printf("\n");
+    FILE *file = fopen("matrix","w+");
+    fseek(file,-writeMatrixIntoFile(matrix,file),SEEK_CUR);
+    char newmatrix[ROWS][COLS];
+    restoreMatrixFromFile(newmatrix,file);
+    printMatrix(newmatrix);
+
+}
+
+```
+
+I used CSV style file format which coma is separator. Also it is using `fgets` function. While I was developing exercise 3 with `fscanf(file,"%[^\n]",buffer)` function, I realized that `fscanf` function is not effecting the seek. Also it was returning wrong sentence after first one. Here my debug result with `fscanf` function:
+
+```
+buffer: 2,-9,-3,6
+buffer: 2
+buffer: 2
+buffer: 2
+2 -9 -3 6 
+2 0 0 0 
+2 0 0 0 
+2 0 0 0 
+```
+
+However, I know that `scanf` functions could be unexpected. So I changed my 'reader' function to `fgets`.
+
+## 4. Program that doing diff
+
+```c
+#include "stdio.h"
+#include "string.h"
+
+
+char doSomethingIfEOF(char *fgetsresponse,char *change){
+    if (fgetsresponse && *fgetsresponse != EOF){
+        return 0;
+    }
+    *change = 0;
+}
+
+void compareFiles(FILE *f1,char *f1name, FILE *f2,char *f2name){
+    char bufferf1[1024]; // 1kb
+    char bufferf2[1024]; // 1kb
+    
+    char f2eof;
+    char f1eof;
+
+    int counter = 1;
+
+    while(1){
+        if (!f1eof  && doSomethingIfEOF(fgets(bufferf1,1023,f1),bufferf1)){
+             printf("\033[31m--%s file ended--\033[0m\n",f1name);
+                f1eof = 1;
+        }
+
+        if (!f2eof && doSomethingIfEOF(fgets(bufferf2,1023,f2),bufferf2)){
+             printf("\033[31m--%s file ended--\033[0m\n",f2name);
+                f2eof = 1;
+        }
+
+        if (f2eof && f1eof){
+            break;
+        }
+
+        printf("\033[35mline:\033[0m \033[36m%d\033[0m:",counter);
+        
+        if (strcmp(bufferf1,bufferf2)){
+            if (!f1eof) printf("\n\033[32m%s file:\033[0m %s",f1name,bufferf1);
+            if (!f2eof) printf("\n\033[34m%s file:\033[0m %s",f2name,bufferf2);
+        }else{
+            printf(" (same)");
+        }
+
+        printf("\n");
+
+
+        counter++;
+    }
+}
+
+void main(){
+    char *firstFile = "first";
+    char *secondFile = "second";
+    
+    
+    FILE *file1 = fopen(firstFile,"r");
+    if (!file1){
+        printf("file openning error!");
+        return;
+    }
+
+    FILE *file2 = fopen(secondFile,"r");
+    if (!file2){
+        printf("file openning error!");
+        return;
+    }
+
+    compareFiles(file1,firstFile,file2,secondFile);   
+}
+```
+
+I used `strcmp` function which is coming from `string.h` library. It is not exactly diff algorithm but I hope enough for this exercise. Briefly it is opening two different files and comparing them line by line. If one of them is finished, other file's data will be always different than other.
+
+## 5. Program that stores and restores userdata from file
+
+```c
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "time.h"
+#define SEPERATOR "|"
+
+enum PersonIndex {Name,Surname,Age,Height,Weight};
+
+#pragma pack(push,1) // I had tried to pointer arithmetic :)
+struct Person{
+    char *Name; 
+    char *Surname;
+    unsigned char Age;
+    unsigned char Height;
+    unsigned char Weight; 
+
+    char ok; // for control
+};
+#pragma pack(pop)
+
+struct Person parseFromBinary(char *bin){
+    struct Person person;
+
+    char *t = strtok(bin, SEPERATOR);
+    for (char i = 0; t ;i++){
+        
+        switch (i)
+        {
+
+            case (Name):
+                person.Name = t;
+                break;
+            case (Surname):
+                person.Surname = t;
+                break;
+                
+                
+
+            case (Age): person.Age = atoi(t); break;
+            case(Height): person.Height = atoi(t); break;
+            case (Weight): person.Weight = atoi(t); person.ok = 1 ;break;
+               
+        
+        default:
+            break;
+        }
+
+
+        t = strtok(NULL,SEPERATOR);
+    }
+
+    return person;
+}
+
+
+// It reads from current seek to LF
+struct Person readFromFile(FILE *file){
+    char buffer[1024];
+    fgets(buffer,1023,file);
+    return parseFromBinary(buffer);
+}
+
+struct Person writeToFile(struct Person person,FILE *file){
+    fprintf(file,"%s|%s|%d|%d|%d\n",person.Name,person.Surname,person.Age,person.Height,person.Weight);
+}
+
+void main(){
+    srand(time(0));
+
+    char query[] = "Omer|Tekin|18|176|70";
+    struct Person person = parseFromBinary(query
+);
+    printf("name: %s\n",person.Name);
+    printf("surname: %s\n",person.Surname);
+    printf("age: %d\n",person.Age);
+    person.Height  += rand()%10;
+  
+
+    FILE *file = fopen("userdata","a+");
+    writeToFile(person,file);
+
+
+    fseek(file,0,SEEK_SET);
+    person = readFromFile(file);
+        
+
+    int counter = 0;
+    while(person.Name && person.ok && !feof(file)){
+        printf("seek: %ld\n",ftell(file));
+        printf("%d: name: %s surname: %s age: %d height: %d weight: %d\n",counter,person.Name,person.Surname,person.Age,person.Height,person.Weight);
+        person = readFromFile(file);
+        counter++;
+    }   
+}
+```
+
+
+I used seperator style in data (like csv). Also I was trying to set struct fields with pointer arithmetics but it didn't work :)
+
+## 6. Program that creates random filled array, saves to file and restores.
+
+```c
+
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "time.h"
+
+#define ARRAY_SIZE 20
+
+
+void fillArray(int *array){
+    for (int i = 0; i < ARRAY_SIZE; i++) {
+        array[i] = (rand() % 21)-10;
+    }
+}
+
+void writeArray(int *array,FILE *file){
+    for(int i = 0; i < ARRAY_SIZE; i++) {
+        fprintf(file,"%d",array[i]);
+        if (i != ARRAY_SIZE-1) fputc('.',file);
+    }
+}
+
+void restoreArray(int array[ARRAY_SIZE],FILE *file){
+    char buffer[4]; // -10 max +\0
+    for(int i = 0; i < ARRAY_SIZE;i++){
+        int j = 0;
+        while(!feof(file)){
+
+            char c = fgetc(file);
+            if (c == '.'){
+                buffer[j] = 0;
+                break;
+            }
+            buffer[j++] = c;
+        }
+
+        array[i] = atoi(buffer);
+    }
+}
+
+void printArray(int *array){
+    for (int i = 0; i < ARRAY_SIZE; i++){
+        printf("%d ",array[i]);
+    }
+}
+
+
+void main(){
+    int array[ARRAY_SIZE];
+
+    fillArray(array);
+    printArray(array);
+
+    FILE *file = fopen("linear","w+");
+    writeArray(array,file);
+
+    printf("\n");
+
+    int array2[ARRAY_SIZE];
+    fseek(file,0,SEEK_SET);
+
+    restoreArray(array2,file);
+    printArray(array2);
+}
+
+```
+
+I didn't add `srand` in the code so random numbers will be same all the time. However, program working as expecting.
